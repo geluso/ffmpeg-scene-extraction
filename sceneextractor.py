@@ -1,7 +1,7 @@
 #!/usr/local/bin/python
 
-import datetime
 import argparse
+import os
 import threading
 
 from collections import defaultdict
@@ -18,19 +18,14 @@ probe_command = "ffprobe -show_frames -of compact=p=0 -f lavfi \"movie=%s,select
 # ffmpeg -i clip.dv -f segment -segment_times 7,20,47 -c copy -map 0:0 scenes/1989-%03d.dv"""
 segment_command = "ffmpeg -i %s -f segment -segment_times LIST_OF_TIMES -c copy -map 0:0 %s/%04d.dv"
 
-# TODO:
-# - suppress ffprobe output
-# - run ffprobe on another thread
-# - create a second thread to repeatedly poll the file scenes file
-# - print the progress of the number of scenes detected and the current time in the movie.
-
-now = datetime.datetime.now()
-default_out_name = "scenes_%d_%02d_%02d_%02d.mp4" % (now.year, now.hour, now.minute, now.second)
-
 # Define the command line parser
 parser = argparse.ArgumentParser(description="This takes one large video file and creates smaller video files representing each scene in the original movie file.")
 parser.add_argument("in_file", type=str, help="Name of the input file.")
-parser.add_argument("out_dir", nargs="?", type=str, default=default_out_name, help="Name of the output directory to be created.")
+
+def path_exists(path):
+  # ugh. unescape previously escaped spaces.
+  path = path.replace("\\ ", " ")
+  return os.path.exists(path)
 
 def seconds_to_timestamp(seconds):
   # calculate hours, minutes, seconds
@@ -55,13 +50,21 @@ def get_duration(filename):
   return duration
 
 def create_scenes_dir(filename):
+  # /Volumes/GELUSO/1992\ January-1993\ July/scenes.txt 
+
   dir_name = get_dir(filename) + "/scenes"
-  cmd = "mkdir %s" % (dir_name)
-  call(cmd, shell=True)
+  if path_exists(dir_name):
+    print "Directory already exists: %s" % dir_name
+  else:
+    cmd = "mkdir %s" % (dir_name)
+    call(cmd, shell=True)
 
   timestamps_txt = "%s/timestamps.txt" % (dir_name)
-  cmd = "touch %s" % (timestamps_txt)
-  call(cmd, shell=True)
+  if path_exists(timestamps_txt):
+    print "timestamps.txt already exists"
+  else:
+    cmd = "touch %s" % (timestamps_txt)
+    call(cmd, shell=True)
 
   return timestamps_txt
 
