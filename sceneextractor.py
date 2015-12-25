@@ -50,8 +50,6 @@ def get_duration(filename):
   return duration
 
 def create_scenes_dir(filename):
-  # /Volumes/GELUSO/1992\ January-1993\ July/scenes.txt 
-
   dir_name = get_dir(filename) + "/scenes"
   if path_exists(dir_name):
     print "Directory already exists: %s" % dir_name
@@ -76,7 +74,6 @@ def detect_scenes(filename, timestamps_txt, duration):
     print "Probing movie for scene changes..."
     cmd = probe_command % (filename, timestamps_txt)
     call(cmd, shell=True)
-    print "Probing complete. N scenes found."
 
   def is_timestamp(line):
     return "pkt_pts_time=" in line
@@ -108,11 +105,11 @@ def detect_scenes(filename, timestamps_txt, duration):
   prober = threading.Thread(target=probe)
   prober.start()
 
-  while (prober.is_alive):
+  while (prober.is_alive()):
     poll()
     sleep(1)
 
-  print "finished probing!"
+  print "Scene detection complete. %d scenes found." % (len(scenes))
 
   scenes.sort()
   return scenes
