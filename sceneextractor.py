@@ -15,16 +15,20 @@ duration_command = "ffprobe -i %s -show_format 2>&1 | grep 'duration='"
 # ffprobe -show_frames -of compact=p=0 -f lavfi "movie=clip-135-02-05\ 05;27;15.dv,select=gt(scene\,.4)" > scenes.txt
 probe_command = "ffprobe -show_frames -of compact=p=0 -f lavfi \"movie=%s,select=gt(scene\,.4)\" > %s 2>&1"
 
-# ffmpeg -i clip.dv -f segment -segment_times 7,20,47 -c copy -map 0:0 scenes/1989-%03d.dv"""
-segment_command = "ffmpeg -i %s -f segment -segment_times LIST_OF_TIMES -c copy -map 0:0 %s/%04d.dv"
+# ffmpeg -i clip.dv -f segment -segment_times 7,20,47 -c copy -map 0:0 scenes/%04d.dv"""
+extract_command = "ffmpeg -i %s -f segment -segment_times %s -c copy -map 0:0 %s/%%04d.dv 2>&1"
 
 # Define the command line parser
 parser = argparse.ArgumentParser(description="This takes one large video file and creates smaller video files representing each scene in the original movie file.")
 parser.add_argument("in_file", type=str, help="Name of the input file.")
 
+def unescape(path):
+  path = path.replace("\\ ", " ")
+  return path
+
 def path_exists(path):
   # ugh. unescape previously escaped spaces.
-  path = path.replace("\\ ", " ")
+  path = unescape(path)
   return os.path.exists(path)
 
 def seconds_to_timestamp(seconds):
@@ -66,6 +70,14 @@ def create_scenes_dir(filename):
 
   return timestamps_txt
 
+def is_timestamp(line):
+  return "pkt_pts_time=" in line
+
+def line_to_timestamp(line):
+  # extract the timestamp from a line that looks like this:
+  # media_type=video|key_frame=1|pkt_pts=94|pkt_pts_time=3.136467|pk...
+  return float(line.split("time=")[1].split("|")[0])
+
 def detect_scenes(filename, timestamps_txt, duration):
   scenes = []
 
@@ -74,14 +86,6 @@ def detect_scenes(filename, timestamps_txt, duration):
     print "Probing movie for scene changes..."
     cmd = probe_command % (filename, timestamps_txt)
     call(cmd, shell=True)
-
-  def is_timestamp(line):
-    return "pkt_pts_time=" in line
-
-  def line_to_timestamp(line):
-    # extract the timestamp from a line that looks like this:
-    # media_type=video|key_frame=1|pkt_pts=94|pkt_pts_time=3.136467|pk...
-    return float(line.split("time=")[1].split("|")[0])
 
   def show_progress(timestamp):
     t1 = seconds_to_timestamp(timestamp)
@@ -114,8 +118,14 @@ def detect_scenes(filename, timestamps_txt, duration):
   scenes.sort()
   return scenes
 
-def extract_scenes():
+def extract_scenes(filename, scenes):
   print "Extracting scenes..."
+  scenes = map(str, scenes)
+  times = ",".join(scenes)
+
+  scenes_dir = get_dir(filename) + "/scenes"
+  cmd = extract_command % (filename, times, scenes_dir)
+  call(cmd, shell=True)
 
 def get_dir(filename):
   path = filename.split("/")
@@ -128,8 +138,13 @@ def main():
   duration = get_duration(filename)
   timestamps_txt = create_scenes_dir(filename)
 
-  detect_scenes(filename, timestamps_txt, duration)
+  times = open(unescape(timestamps_txt)).readlines()
+  if len(times) > 0:
+    times = filter(is_timestamp, times)
+    scenes = map(line_to_timestamp, times)
+  else:
+    scenes = detect_scenes(filename, timestamps_txt, duration)
 
-  poll_progress(timestamps_txt)
+  extract_scenes(filename, scenes)
 
 main()
