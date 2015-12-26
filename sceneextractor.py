@@ -5,6 +5,7 @@ import os
 import threading
 
 from collections import defaultdict
+from datetime import datetime
 from subprocess import call, check_output
 from time import sleep
 from uuid import uuid1
@@ -21,6 +22,9 @@ extract_command = "ffmpeg -i %s -f segment -segment_times %s -c copy -map 0:0 %s
 # Define the command line parser
 parser = argparse.ArgumentParser(description="This takes one large video file and creates smaller video files representing each scene in the original movie file.")
 parser.add_argument("in_file", type=str, help="Name of the input file.")
+
+def log_current_time():
+  print datetime.now().isoformat()
 
 def unescape(path):
   path = path.replace("\\ ", " ")
@@ -45,6 +49,7 @@ def seconds_to_timestamp(seconds):
 
 def get_duration(filename):
   cmd = duration_command % (filename)
+  print cmd
   duration = check_output(cmd, shell=True)
   duration = duration.split("duration=")[1]
 
@@ -135,6 +140,9 @@ def main():
   args = parser.parse_args()
   filename = args.in_file.replace(" ", "\\ ")
 
+  log_current_time()
+  print "Processing", filename
+
   duration = get_duration(filename)
   timestamps_txt = create_scenes_dir(filename)
 
@@ -143,8 +151,10 @@ def main():
     times = filter(is_timestamp, times)
     scenes = map(line_to_timestamp, times)
   else:
+    log_current_time()
     scenes = detect_scenes(filename, timestamps_txt, duration)
 
+  log_current_time()
   extract_scenes(filename, scenes)
 
 main()
