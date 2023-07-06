@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description="This takes one large video file an
 parser.add_argument("in_file", type=str, help="Name of the input file.")
 
 def log_current_time():
-  print datetime.now().isoformat()
+  print(datetime.now().isoformat())
 
 def unescape(path):
   path = path.replace("\\ ", " ")
@@ -49,26 +49,29 @@ def seconds_to_timestamp(seconds):
 
 def get_duration(filename):
   cmd = duration_command % (filename)
-  print cmd
+  print(cmd)
   duration = check_output(cmd, shell=True)
+  duration = str(duration)
   duration = duration.split("duration=")[1]
 
   # eliminate fractions of a second
   duration = duration.split(".")[0]
   duration = int(duration)
+  print("duration:", duration)
+  print()
   return duration
 
 def create_scenes_dir(filename):
   dir_name = get_dir(filename) + "/scenes"
   if path_exists(dir_name):
-    print "Directory already exists: %s" % dir_name
+    print("Directory already exists: %s" % dir_name)
   else:
     cmd = "mkdir %s" % (dir_name)
     call(cmd, shell=True)
 
   timestamps_txt = "%s/timestamps.txt" % (dir_name)
   if path_exists(timestamps_txt):
-    print "timestamps.txt already exists"
+    print("timestamps.txt already exists")
   else:
     cmd = "touch %s" % (timestamps_txt)
     call(cmd, shell=True)
@@ -88,7 +91,7 @@ def detect_scenes(filename, timestamps_txt, duration):
 
   def probe():
     # probe the movie and create a text file containing timestamps of scene changes
-    print "Probing movie for scene changes..."
+    print("Probing movie for scene changes...")
     cmd = probe_command % (filename, timestamps_txt)
     call(cmd, shell=True)
 
@@ -96,11 +99,12 @@ def detect_scenes(filename, timestamps_txt, duration):
     t1 = seconds_to_timestamp(timestamp)
     t2 = seconds_to_timestamp(duration)
     percent = 100 * (timestamp / duration)
-    print "Found scene change at %s of %s (%02.2f%% complete)" % (t1, t2, percent)
+    print("Found scene change at %s of %s (%02.2f%% complete)" % (t1, t2, percent))
 
   def poll():
     cmd = "cat %s" % (timestamps_txt)
     lines = check_output(cmd, shell=True)
+    lines = str(lines)
     lines = lines.split("\n")
     lines = filter(is_timestamp, lines)
 
@@ -111,6 +115,9 @@ def detect_scenes(filename, timestamps_txt, duration):
         scenes.append(timestamp)
         show_progress(timestamp)
 
+  print("detecting scenes:")
+  print()
+
   prober = threading.Thread(target=probe)
   prober.start()
 
@@ -118,18 +125,25 @@ def detect_scenes(filename, timestamps_txt, duration):
     poll()
     sleep(1)
 
-  print "Scene detection complete. %d scenes found." % (len(scenes))
+  print("Scene detection complete. %d scenes found." % (len(scenes)))
 
   scenes.sort()
   return scenes
 
 def extract_scenes(filename, scenes):
-  print "Extracting scenes..."
+  print("Extracting scenes...")
+  print("scenes:", list(scenes))
+  print()
+
   scenes = map(str, scenes)
   times = ",".join(scenes)
+  print("times:", times)
+  print()
 
   scenes_dir = get_dir(filename) + "/scenes"
   cmd = extract_command % (filename, times, scenes_dir)
+  print("cmd", cmd)
+  print()
   call(cmd, shell=True)
 
 def get_dir(filename):
@@ -140,18 +154,25 @@ def main():
   args = parser.parse_args()
   filename = args.in_file.replace(" ", "\\ ")
 
+  print("filename:", filename)
+  print()
+
   log_current_time()
-  print "Processing", filename
+  print("Processing", filename)
 
   duration = get_duration(filename)
   timestamps_txt = create_scenes_dir(filename)
 
   times = open(unescape(timestamps_txt)).readlines()
+  print("times:", times)
+  print()
   if len(times) > 0:
+    print("times is greater than zero")
     times = filter(is_timestamp, times)
     scenes = map(line_to_timestamp, times)
   else:
     log_current_time()
+    print("running detect scenes:")
     scenes = detect_scenes(filename, timestamps_txt, duration)
 
   log_current_time()
