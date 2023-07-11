@@ -5,4 +5,5 @@ s03e04.zip
 s03e04/
 s03e05/
 s03e06.zip
-
+*.swp
+__pycache__
