@@ -17,6 +17,11 @@ probe_command = "ffprobe -show_frames -of compact=p=0 -f lavfi \"movie='%s',sele
 #extract_command = "ffmpeg -i %s -f segment -segment_times %s -c copy -map 0:0 %s/%%04d.avi 2>&1"
 extract_command = "ffmpeg -i '%s' -ac 2 -segment_times '%s' -reset_timestamps 1 -f segment '%s/%%04d.mp4' 2>&1"
 
+video_to_audio_command = "ffmpeg -i %s -ar 16000 %s"
+
+audio_to_text_command = "/Users/geluso/Code/whisper.cpp/main -m /Users/geluso/Code/whisper.cpp/models/ggml-base.en.bin -f '%s' -osrt -of '%s'"
+
+
 create_json_structure_command = 'tree -J > structure.json'
 
 def main():
@@ -29,7 +34,7 @@ def main():
 
             for filename in filenames:
                 extension = filename.split(".")[-1]
-                if extension in EXPECTED_EXTENSIONS:
+                if extension in EXPECTED_EXTENSIONS and not filename.startswith("._"):
                     process_file(filename, progress_file)
                 else:
                     print("Skipping file with non-expected extension:", filename)
@@ -72,10 +77,6 @@ def process_file(filename, progress_file):
     video_output_dir = "%s/scenes" % (filename_no_extension)
     audio_output_dir = "%s/audio" % (filename_no_extension)
     text_output_dir = "%s/text" % (filename_no_extension)
-
-    video_to_audio_command = "ffmpeg -i %s -ar 16000 %s"
-
-    audio_to_text_command = "/Users/geluso/Code/whisper.cpp/main -m /Users/geluso/Code/whisper.cpp/models/ggml-base.en.bin -f '%s' -osrt -of '%s'"
 
     #cmd = "rm -rf %s" % (video_output_dir)
     #call(cmd, shell=True)
