@@ -15,7 +15,7 @@ probe_command = "ffprobe -show_frames -of compact=p=0 -f lavfi \"movie='%s',sele
 
 # ffmpeg -i clip.dv -f segment -segment_times 7,20,47 -c copy -map 0:0 scenes/%04d.dv"""
 #extract_command = "ffmpeg -i %s -f segment -segment_times %s -c copy -map 0:0 %s/%%04d.avi 2>&1"
-extract_command = "ffmpeg -i '%s' -ac 2 -segment_times '%s' -reset_timestamps 1 -f segment '%s/%%04d.mp4' 2>&1"
+extract_command = "ffmpeg -i '%s' -ac 2 -segment_times '%s' -reset_timestamps 1 -f segment -pix_fmt yuv420p '%s/%%04d.mp4' 2>&1"
 
 video_to_audio_command = "ffmpeg -i %s -ar 16000 %s"
 
@@ -32,7 +32,7 @@ def main():
             progress_file.writelines(msg)
             progress_file.flush()
 
-            for filename in filenames:
+            for filename in sorted(filenames):
                 extension = filename.split(".")[-1]
                 if extension in EXPECTED_EXTENSIONS and not filename.startswith("._"):
                     process_file(filename, progress_file)
