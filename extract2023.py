@@ -33,11 +33,16 @@ def main():
             progress_file.flush()
 
             for filename in sorted(filenames):
-                extension = filename.split(".")[-1]
-                if extension in EXPECTED_EXTENSIONS and not filename.startswith("._"):
-                    process_file(filename, progress_file)
-                else:
-                    print("Skipping file with non-expected extension:", filename)
+                try:
+                    extension = filename.split(".")[-1]
+                    if extension in EXPECTED_EXTENSIONS and not filename.startswith("._"):
+                        process_file(filename, progress_file)
+                    else:
+                        print("Skipping file with non-expected extension:", filename)
+                except Exception as e:
+                    print("Error processing:", filename)
+                    progress_file.writelines(str(e))
+                    progress_file.flush()
         do_cmd(create_json_structure_command)
 
 def do_cmd(cmd, is_checking_output=False, is_breakpoint=False):
